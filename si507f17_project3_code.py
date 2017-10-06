@@ -14,6 +14,26 @@ import requests
 
 # Write your code for Part 0 here.
 
+# cache file
+try:
+	newmantaylor_data = open("newmantaylor_data.html","r").text
+except:
+	newmantaylor_data = requests.get("http://newmantaylor.com/gallery.html").text
+	f = open("newmantaylor_data.html","w")
+	f.write(newmantaylor_data)
+	f.close()
+
+soup = BeautifulSoup(newmantaylor_data, 'html.parser')
+
+img_list = soup.find_all("img")
+#print(img_list)
+
+for x in img_list:
+	try:
+		print(x['alt'])
+	except:
+		print("No alternative text provided!")
+
 
 ######### PART 1 #########
 
