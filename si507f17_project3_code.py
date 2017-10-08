@@ -47,51 +47,30 @@ for x in img_list:
 
 # We've provided comments to guide you through the complex try/except, but if you prefer to build up the code to do this scraping and caching yourself, that is OK.
 
+baseurl = "https://www.nps.gov/"
+state_list = ['','Arkansas','California','Michigan']
+file_names = ['nps_gov_data','arkansas_data','california_data','michigan_data']
 
+# get state data
+for i in range(len(file_names)):
+	try:
+		soup = BeautifulSoup(open(file_names[i] + ".html", "r"),'html.parser')
+		print("Successfully found cache for %s" % file_names[i])
+	except:
+		soup = BeautifulSoup(requests.get(baseurl + "/index.html").text,'html.parser')
 
+		# if there's a state in the state_list, then go to another page		
+		if state_list != '':
+			div_one = soup.find('ul',{'class':'dropdown-menu SearchBar-keywordSearch'})
+			list_points = div_one.find_all('li')
+			for p in list_points:
+				if p.text in state_list:
+					soup = BeautifulSoup(requests.get(baseurl + p.find('a')['href']).text,'html.parser')
 
-
-
-# Get individual states' data...
-
-# Result of a following try/except block should be that
-# there exist 3 files -- arkansas_data.html, california_data.html, michigan_data.html
-# and the HTML-formatted text stored in each one is available
-# in a variable or data structure 
-# that the rest of the program can access.
-
-# TRY: 
-# To open and read all 3 of the files
-
-# But if you can't, EXCEPT:
-
-# Create a BeautifulSoup instance of main page data 
-# Access the unordered list with the states' dropdown
-
-# Get a list of all the li (list elements) from the unordered list, using the BeautifulSoup find_all method
-
-# Use a list comprehension or accumulation to get all of the 'href' attributes of the 'a' tag objects in each li, instead of the full li objects
-
-# Filter the list of relative URLs you just got to include only the 3 you want: AR's, CA's, MI's, using the accumulator pattern & conditional statements
-
-
-# Create 3 URLs to access data from by appending those 3 href values to the main part of the NPS url. Save each URL in a variable.
-
-
-## To figure out what URLs you want to get data from (as if you weren't told initially)...
-# As seen if you debug on the actual site. e.g. Maine parks URL is "http://www.nps.gov/state/me/index.htm", Michigan's is "http://www.nps.gov/state/mi/index.htm" -- so if you compare that to the values in those href attributes you just got... how can you build the full URLs?
-
-
-# Finally, get the HTML data from each of these URLs, and save it in the variables you used in the try clause
-# (Make sure they're the same variables you used in the try clause! Otherwise, all this code will run every time you run the program!)
-
-
-# And then, write each set of data to a file so this won't have to run again.
-
-
-
-
-
+		f = open(file_names[i] + ".html", "w")
+		f.write(soup.encode('ascii','replace'))
+		f.close()
+		print("Downloaded %s data from internet" % (file_names[i]))
 
 
 ######### PART 2 #########
@@ -110,6 +89,34 @@ for x in img_list:
 # However, to begin your investigation and begin to plan your class definition, you may want to open this file and create a BeautifulSoup instance of it to do investigation on.
 
 # Remember that there are things you'll have to be careful about listed in the instructions -- e.g. if no type of park/site/monument is listed in input, one of your instance variables should have a None value...
+
+################### TEST MATERIAL ####################
+
+sample_inst = BeautifulSoup(requests.get("https://www.nps.gov/arpo/index.htm").text,'html.parser')
+######################################################
+
+
+class NationalSite(object):
+	def __init__(self,data):
+		self.data = data
+		self.location = data.find('span',{'class':'Hero-location'}).text
+		self.name = data.find('a',{'class':'Hero-title'}).text
+		self.type = data.find('span',{'class':'Hero-designation'}).text
+		self.description = data.find('div',{'class':'Component text-content-size text-content-style'}).find('p').text
+
+	def __str__(self):
+		return "{} | {}".format(self.name, self.location)
+
+	def get_mailing_address(self):
+		mailing_site = self.data.find('div',{'class':'UtilityNav','id':'UtilityNav'}).find('li').find('a')['href']
+		mail_soup_data = BeautifulSoup(requests.get(baseurl + mailing_site).text,'html.parser')
+		return mail_soup_data
+
+
+test = NationalSite(sample_inst)
+print(test.get_mailing_address())
+
+
 
 
 
