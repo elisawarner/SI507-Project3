@@ -14,8 +14,6 @@ import requests
 
 # Write your code for Part 0 here.
 
-print("**************** PART 0 ******************\n")
-
 # cache file
 try:
 	newmantaylor_data = open("newmantaylor_data.html","r").text
@@ -39,8 +37,6 @@ for x in img_list:
 
 ######### PART 1 #########
 
-print("**************** PART 1 ******************\n")
-
 # Get the main page data...
 
 # Try to get and cache main page data if not yet cached
@@ -55,46 +51,29 @@ baseurl = "https://www.nps.gov/"
 state_list = ['','Arkansas','California','Michigan']
 file_names = ['nps_gov_data','arkansas_data','california_data','michigan_data']
 
-# get state data or check if there's a cache
-
-def get_data(state, file_name='', notice=False):
-	if notice:
-		print("Looking for a cache...")
-	
+# get state data
+for i in range(len(file_names)):
 	try:
-		soup = BeautifulSoup(open(file_name + ".html", "r"),'html.parser')
-		if notice:
-			print("Successfully found a cache for %s" % file_name)
-		return soup
+		soup = BeautifulSoup(open(file_names[i] + ".html", "r"),'html.parser')
+		print("Successfully found cache for %s" % file_names[i])
 	except:
-		raw_data = requests.get(baseurl + "/index.html").text
-		soup = BeautifulSoup(raw_data,'html.parser')
+		soup = BeautifulSoup(requests.get(baseurl + "/index.html").text,'html.parser')
 
 		# if there's a state in the state_list, then go to another page		
-		if file_name != '':
+		if state_list != '':
 			div_one = soup.find('ul',{'class':'dropdown-menu SearchBar-keywordSearch'})
 			list_points = div_one.find_all('li')
 			for p in list_points:
-				if p.text in state:
-					raw_data = requests.get(baseurl + p.find('a')['href']).text
+				if p.text in state_list:
+					soup = BeautifulSoup(requests.get(baseurl + p.find('a')['href']).text,'html.parser')
 
-		f = open(file_name + ".html", "w")
-		f.write(raw_data)
+		f = open(file_names[i] + ".html", "w")
+		f.write(soup.encode('ascii','replace'))
 		f.close()
-		
-		if notice:
-			print("Downloaded %s data from internet" % (file_names[i]))
-		
-		return BeautifulSoup(raw_data,'html.parser')
-
-
-for i in range(len(file_names)):
-	get_data(state_list[i], file_names[i], notice=True)
+		print("Downloaded %s data from internet" % (file_names[i]))
 
 
 ######### PART 2 #########
-
-print("**************** PART 2 ******************\n")
 
 ## Before truly embarking on Part 2, we recommend you do a few things:
 
@@ -111,30 +90,29 @@ print("**************** PART 2 ******************\n")
 
 # Remember that there are things you'll have to be careful about listed in the instructions -- e.g. if no type of park/site/monument is listed in input, one of your instance variables should have a None value...
 
+################### TEST MATERIAL ####################
+
+sample_link = BeautifulSoup(requests.get("https://www.nps.gov/isro/index.htm").text,'html.parser')
+######################################################
+
 
 ## Define your class NationalSite here:
 class NationalSite(object):
 	def __init__(self,data):
 		self.data = data
-		self.name = data.find('h3').text
-		self.location = data.find('h4').text
-		self.type = data.find('h2').text
-		self.description = data.find('p').text.strip()
+		self.location = data.find('span',{'class':'Hero-location'}).text
+		self.name = data.find('a',{'class':'Hero-title'}).text
+		self.type = data.find('span',{'class':'Hero-designation'}).text
+		self.description = data.find('div',{'class':'Component text-content-size text-content-style'}).find('p').text
 
 	def __str__(self):
 		return "{} | {}".format(self.name, self.location)
 
 	# Remember to test this code for a park with no address
 	def get_mailing_address(self):
-
-		for li in self.data.find_all('ul'):
-			if 'Basic' in li.text.split() and 'Information' in li.text.split():
-				mailing_site = li.find('a')['href']
-			else:
-				return ""
-
-		mail_soup_data = BeautifulSoup(requests.get(mailing_site).text,'html.parser')
-
+		mailing_site = self.data.find('div',{'class':'UtilityNav','id':'UtilityNav'}).find('li').find('a')['href']
+		mail_soup_data = BeautifulSoup(requests.get(baseurl + mailing_site).text,'html.parser')
+		
 		try:
 			div_one = mail_soup_data.find('div',{'class':'mailing-address'})
 			street_address = div_one.find('span',{'itemprop':'streetAddress'}).text.strip()
@@ -142,7 +120,7 @@ class NationalSite(object):
 			state = div_one.find('span',{'itemprop':'addressRegion'}).text.strip()
 			postal_code = div_one.find('span',{'itemprop':'postalCode'}).text.strip()
 
-			address_list = [self.name, street_address, locality, state, postal_code]
+			address_list = [street_address, locality, state, postal_code]
 
 			return " / ".join(address_list)
 		except:
@@ -152,71 +130,42 @@ class NationalSite(object):
 		return var in self.get_mailing_address()
 
 
+# create sample instance
+test = NationalSite(sample_link)
 
-################### TEST MATERIAL ####################
-f = open("sample_html_of_park.html",'r')
-soup_park_inst = BeautifulSoup(f.read(), 'html.parser') # an example of 1 BeautifulSoup instance to pass into your class
-sample_inst = NationalSite(soup_park_inst)
-f.close()
+# test mailing address
+print(test.get_mailing_address())
 
-print(sample_inst.get_mailing_address())
-######################################################
+# Test contains method
+print("Yosemite" in test)
+
+
 
 
 ######### PART 3 #########
-
-print("**************** PART 3 ******************\n")
 
 # Create lists of NationalSite objects for each state's parks.
 
 # HINT: Get a Python list of all the HTML BeautifulSoup instances that represent each park, for each state.
 
-michigan_natl_sites = [NationalSite(x) for x in get_data('Michigan', 'michigan').find_all(lambda tag: tag.name == 'li' and tag.get('class') == ['clearfix'])]
-california_natl_sites = [NationalSite(x) for x in get_data('California','california').find_all(lambda tag: tag.name == 'li' and tag.get('class') == ['clearfix'])]
-arkansas_natl_sites = [NationalSite(x) for x in get_data('Arkansas','arkansas').find_all(lambda tag: tag.name == 'li' and tag.get('class') == ['clearfix'])]
 
-print([x.name for x in california_natl_sites])
-	
+
+
 ##Code to help you test these out:
-#for p in california_natl_sites:
+# for p in california_natl_sites:
 # 	print(p)
-#for a in arkansas_natl_sites:
+# for a in arkansas_natl_sites:
 # 	print(a)
-#for m in michigan_natl_sites:
-#	print(m)
-#	break
+# for m in michigan_natl_sites:
+# 	print(m)
+
 
 
 ######### PART 4 #########
-
-print("**************** PART 4 ******************\n")
 
 ## Remember the hints / things you learned from Project 2 about writing CSV files from lists of objects!
 
 ## Note that running this step for ALL your data make take a minute or few to run -- so it's a good idea to test any methods/functions you write with just a little bit of data, so running the program will take less time!
 
 ## Also remember that IF you have None values that may occur, you might run into some problems and have to debug for where you need to put in some None value / error handling!
-
-#title_list = [x.lower() for x in state_list[1:]]
-
-def export_data(state, sites_list):
-	fhnd = open(state + '.csv','w')
-
-	fhnd.write('Name,Location,Address,Description\n')
-
-	for inst in sites_list:
-		string = """{},"{}","{}","{}"\n""".format(
-			inst.name,
-			inst.location,
-			inst.get_mailing_address(),
-			inst.description)
-		fhnd.write(string)
-	fhnd.close()
-
-
-export_data('michigan', michigan_natl_sites)
-export_data('california', california_natl_sites)
-export_data('arkansas', arkansas_natl_sites)
-
-
 
