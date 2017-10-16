@@ -1,6 +1,7 @@
 from bs4 import BeautifulSoup
 import unittest
 import requests
+import csv
 
 #########
 ## Instr note: the outline comments will stay as suggestions, otherwise it's too difficult.
@@ -203,20 +204,20 @@ def export_data(state, sites_list):
 	fhnd = open(state + '.csv','w')
 
 	fhnd.write('Name,Location,Address,Description\n')
+	outfile = csv.writer(fhnd, delimiter=",", quotechar='"', quoting=csv.QUOTE_MINIMAL)
 
 	for inst in sites_list:
-		string = """{},"{}","{}","{}"\n""".format(
-			inst.name,
-			inst.location,
-			inst.get_mailing_address(),
-			inst.description)
-		fhnd.write(string)
+		outfile.writerow([inst.name, inst.location, inst.get_mailing_address(), inst.description])
+
 	fhnd.close()
 
 
+print("Exporting Michigan Data...")
 export_data('michigan', michigan_natl_sites)
+print("Exporting California Data...")
 export_data('california', california_natl_sites)
+print("Exporting Arkansas Data...")
 export_data('arkansas', arkansas_natl_sites)
 
-
+print("Done")
 
